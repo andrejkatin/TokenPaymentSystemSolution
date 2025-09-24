@@ -5,11 +5,11 @@ namespace TransactionApi.Utils
 {
     public static class HashFunctions
     {
-        public static string ComputeSha256Hash(string rawData)
+        public static string ComputeMd5Hash(string rawData)
         {
-            using (SHA256 sha256Hash = SHA256.Create())
+            using (MD5 md5Hash = MD5.Create())
             {
-                var hash = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                var hash = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
                 return BitConverter.ToString(hash).Replace("-", "").ToLower();
             }
         }
