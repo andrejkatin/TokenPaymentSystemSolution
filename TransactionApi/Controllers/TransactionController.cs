@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using TransactionApi.Dtos.TokenDtos;
 using TransactionApi.Dtos.TransactionDtos;
 using TransactionApi.Services;
@@ -11,27 +12,51 @@ namespace TransactionApi.Controllers
     public class TransactionController : ControllerBase
     {
         private readonly ITransactionService TransactionService;
-        public TransactionController(ITransactionService transactionService)
+        private readonly IMemoryCache _cache;
+
+        public TransactionController(ITransactionService transactionService, IMemoryCache cache)
         {
             TransactionService = transactionService;
+            _cache = cache;
         }
 
         [HttpPost("payment")]
         public async Task<ActionResult> CreateTransactionPayment([FromBody] PaymentTransactionCreateDto transactionCreateDto)
         {
-            if (transactionCreateDto.TransactionType != TransactionTypeEnum.Payment) {
+            if (transactionCreateDto.TransactionType != TransactionTypeEnum.Payment)
+            {
                 return BadRequest("Wrong transaction type.");
             }
 
             Guid transactionId = Guid.NewGuid();
-            var currentTokens = await TransactionService.GetTokensForTransaction(transactionCreateDto.TokenType, transactionCreateDto.From, transactionCreateDto.To);
+
+            string cacheKey = $"tokens_{transactionCreateDto.TokenType}_{transactionCreateDto.From}_{transactionCreateDto.To}";
+
+            if (!_cache.TryGetValue(cacheKey, out TokensForTransactionDto currentTokens))
+            {
+                currentTokens = await TransactionService.GetTokensForTransaction(
+                    transactionCreateDto.TokenType,
+                    transactionCreateDto.From,
+                    transactionCreateDto.To
+                );
+
+                _cache.Set(cacheKey, currentTokens, TimeSpan.FromMinutes(5));
+            }
+
             var createdTokens = await TransactionService.CreateNewTokens(transactionId, currentTokens, transactionCreateDto.Amount, transactionCreateDto.TokenType);
-            var transactionToProcess = TransactionService.CreateTransactionToProcess(transactionId, TransactionStatus.Success, transactionCreateDto.From, currentTokens, createdTokens, transactionCreateDto.Amount, transactionCreateDto.TokenType);
+            var transactionToProcess = TransactionService.CreateTransactionToProcess(
+                transactionId,
+                TransactionStatus.Success,
+                transactionCreateDto.From,
+                currentTokens,
+                createdTokens,
+                transactionCreateDto.Amount,
+                transactionCreateDto.TokenType);
+
             TransactionService.AddTransactionToPool(transactionToProcess);
 
             return Ok();
         }
-
 
         [HttpPost("deposit")]
         public async Task<ActionResult> CreateTransactionDeposit([FromBody] DepositOrWithdrawTransactionCreateDto transactionCreateDto)
@@ -42,14 +67,35 @@ namespace TransactionApi.Controllers
             }
 
             Guid transactionId = Guid.NewGuid();
-            var currentToken = await TransactionService.GetTokenForTransaction(transactionCreateDto.TokenType, transactionCreateDto.Address);
-            var createdToken = await TransactionService.CreateNewToken(currentToken.WalletAddress, transactionId, TransactionTypeEnum.Deposit, currentToken, transactionCreateDto.Amount, transactionCreateDto.TokenType);
-            var transactionToProcess = TransactionService.CreateTransactionToProcess(transactionId, 
-                TransactionStatus.Success, 
-                transactionCreateDto.Address, 
-                new TokensForTransactionDto() { TokenFrom = null, TokenTo = currentToken }, 
-                new TokensForTransactionDto() { TokenFrom = null, TokenTo = createdToken }, 
+
+            string cacheKey = $"token_{transactionCreateDto.TokenType}_{transactionCreateDto.Address}";
+
+            if (!_cache.TryGetValue(cacheKey, out TokenDto currentToken))
+            {
+                currentToken = await TransactionService.GetTokenForTransaction(
+                    transactionCreateDto.TokenType,
+                    transactionCreateDto.Address
+                );
+
+                _cache.Set(cacheKey, currentToken, TimeSpan.FromMinutes(5));
+            }
+
+            var createdToken = await TransactionService.CreateNewToken(
+                currentToken.WalletAddress,
+                transactionId,
+                TransactionTypeEnum.Deposit,
+                currentToken,
+                transactionCreateDto.Amount,
+                transactionCreateDto.TokenType);
+
+            var transactionToProcess = TransactionService.CreateTransactionToProcess(
+                transactionId,
+                TransactionStatus.Success,
+                transactionCreateDto.Address,
+                new TokensForTransactionDto() { TokenFrom = null, TokenTo = currentToken },
+                new TokensForTransactionDto() { TokenFrom = null, TokenTo = createdToken },
                 transactionCreateDto.Amount, transactionCreateDto.TokenType);
+
             TransactionService.AddTransactionToPool(transactionToProcess);
 
             return Ok();
@@ -64,8 +110,27 @@ namespace TransactionApi.Controllers
             }
 
             Guid transactionId = Guid.NewGuid();
-            var currentToken = await TransactionService.GetTokenForTransaction(transactionCreateDto.TokenType, transactionCreateDto.Address);
-            var createdToken = await TransactionService.CreateNewToken(currentToken.WalletAddress, transactionId, TransactionTypeEnum.Withdraw, currentToken, transactionCreateDto.Amount, transactionCreateDto.TokenType);
+
+            string cacheKey = $"token_{transactionCreateDto.TokenType}_{transactionCreateDto.Address}";
+
+            if (!_cache.TryGetValue(cacheKey, out TokenDto currentToken))
+            {
+                currentToken = await TransactionService.GetTokenForTransaction(
+                    transactionCreateDto.TokenType,
+                    transactionCreateDto.Address
+                );
+
+                _cache.Set(cacheKey, currentToken, TimeSpan.FromMinutes(5));
+            }
+
+            var createdToken = await TransactionService.CreateNewToken(
+                currentToken.WalletAddress,
+                transactionId,
+                TransactionTypeEnum.Withdraw,
+                currentToken,
+                transactionCreateDto.Amount,
+                transactionCreateDto.TokenType);
+
             var transactionToProcess = TransactionService.CreateTransactionToProcess(
                 transactionId,
                 TransactionStatus.Success,
@@ -73,6 +138,7 @@ namespace TransactionApi.Controllers
                 new TokensForTransactionDto() { TokenFrom = currentToken, TokenTo = null },
                 new TokensForTransactionDto() { TokenFrom = createdToken, TokenTo = null },
                 transactionCreateDto.Amount, transactionCreateDto.TokenType);
+
             TransactionService.AddTransactionToPool(transactionToProcess);
 
             return Ok();
