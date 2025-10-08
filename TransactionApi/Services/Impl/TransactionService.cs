@@ -47,7 +47,7 @@ namespace TransactionApi.Services.Impl
                 TransactionIniciator = iniciator
             };
 
-            transactionToProcess.Transaction.TransactionSignature = HashFunctions.ComputeMd5Hash(JsonConvert.SerializeObject(transactionToProcess.Transaction));
+            transactionToProcess.Transaction.TransactionSignature = HashFunctions.ComputeSha256Hash(JsonConvert.SerializeObject(transactionToProcess.Transaction));
             transactionToProcess.CreatedTokens = newTokens;
 
             return transactionToProcess;
