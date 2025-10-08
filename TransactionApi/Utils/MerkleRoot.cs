@@ -2,7 +2,7 @@
 {
     public static class MerkleRoot
     {
-        private readonly static Func<string,string> HashFunc = HashFunctions.ComputeMD5Hash;
+        private readonly static Func<string,string> HashFunc = HashFunctions.ComputeSha256Hash;
 
         public static string GenerateMerkleRoot(List<string> transactions)
         {
