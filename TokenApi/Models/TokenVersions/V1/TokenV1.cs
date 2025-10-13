@@ -8,7 +8,7 @@ namespace TokenApi.Models.TokenVersions.V1
 {
     public class TokenV1 : IToken
     {
-        private static readonly Func<byte[], int> HashFunction = HashFunctionV1.ComputeHash;
+        private static readonly Func<byte[], int> HashFunction = HashFunctionV1.ComputeJenkinsHash;
 
         public Guid TokenId;
 
