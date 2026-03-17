@@ -13,5 +13,41 @@ namespace TransactionApi.Utils
                 return BitConverter.ToString(hash).Replace("-", "").ToLower();
             }
         }
+
+        public static string ComputeSHA1Hash(string rawData)
+        {
+            using (SHA1 sha1 = SHA1.Create())
+            {
+                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                return BitConverter.ToString(hash).Replace("-", "").ToLower();
+            }
+        }
+
+        public static string ComputeSHA256Hash(string rawData)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                return BitConverter.ToString(hash).Replace("-", "").ToLower();
+            }
+        }
+
+        public static string ComputeSHA384Hash(string rawData)
+        {
+            using (SHA384 sha384 = SHA384.Create())
+            {
+                var hash = sha384.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                return BitConverter.ToString(hash).Replace("-", "").ToLower();
+            }
+        }
+
+        public static string ComputeSHA512Hash(string rawData)
+        {
+            using (SHA512 sha512 = SHA512.Create())
+            {
+                var hash = sha512.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                return BitConverter.ToString(hash).Replace("-", "").ToLower();
+            }
+        }
     }
 }
