@@ -73,11 +73,11 @@ namespace TransactionApi.HostedServices
                         transactionToProcess.CreatedTokens.TokenTo.TokenData = JsonConvert.SerializeObject(tokenDataTo);
                     }
 
-                    var client = HttpClientFactory.CreateClient("WalletApi");
                     var mediaType = new MediaTypeHeaderValue("application/json");
                     StringContent content = new StringContent(JsonConvert.SerializeObject(transactionToProcess.CreatedTokens), mediaType);
 
-                    var response = client.PostAsync("/api/wallet/updateTokensByTransaction", content);
+                    var response = HttpClientFactory.CreateClient("WalletApi").PostAsync("/api/wallet/updateTokensByTransaction", content);
+
                     await Context.Transactions.AddAsync(transactionToProcess.Transaction);
                 }
 
